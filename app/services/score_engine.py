@@ -57,7 +57,6 @@ def calculate_mr_score(mr_id: str, db: Session) -> float:
 
 def calculate_developer_score(user_id: str, db: Session, project_id: str = None) -> float:
     """Sum of this developer's MR scores. Persists to User.total_score.
-    FIX 6: creates a high alert when sum drops below 700.
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -80,7 +79,6 @@ def calculate_developer_score(user_id: str, db: Session, project_id: str = None)
     user.total_score = total
     db.commit()
 
-    # FIX 6: alert when sum score is low
     if total < 700 and project_id:
         _ensure_low_score_alert(db, user, total, project_id)
 

@@ -58,7 +58,6 @@ class JiraService:
         return tasks
 
     def fetch_sprints(self, project_key: str = None):
-        # FIX 9: caller can override the project key; falls back to env default
         _require_jira_settings()
         key = project_key or settings.jira_project_key
         url = f"{_get_base_url()}/rest/agile/1.0/board"

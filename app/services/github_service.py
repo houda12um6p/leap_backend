@@ -292,6 +292,8 @@ class GitHubService:
             mr.id for mr in self.db.query(MergeRequest)
             .filter(MergeRequest.project_id == project_id).all()
         ]
+
+        
         if not mr_ids:
             return []
         return self.db.query(Commit).filter(Commit.merge_request_id.in_(mr_ids)).all()
