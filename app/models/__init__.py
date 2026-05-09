@@ -5,6 +5,7 @@ from .merge_request import MergeRequest, MergeRequestStatus
 from .commit import Commit, CommitType
 from .review_comment import ReviewComment
 from .alert import Alert, AlertSeverity
+from .compte_rendu import CompteRendu
 
 __all__ = [
     "User", "UserRole",
@@ -14,4 +15,5 @@ __all__ = [
     "Commit", "CommitType",
     "ReviewComment",
     "Alert", "AlertSeverity",
+    "CompteRendu",
 ]

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
-from .routers import auth, github, jira, webhooks, projects, alerts, dashboard, scores, merge_requests
+from .routers import auth, github, jira, webhooks, projects, alerts, dashboard, scores, merge_requests, compte_rendus
 from .core.database import Base, engine
 Base.metadata.create_all(bind=engine)
 app = FastAPI(
@@ -27,6 +27,7 @@ app.include_router(alerts.router, prefix=settings.api_v1_str)
 app.include_router(dashboard.router, prefix=settings.api_v1_str)
 app.include_router(scores.router, prefix=settings.api_v1_str)
 app.include_router(merge_requests.router, prefix=settings.api_v1_str)
+app.include_router(compte_rendus.router, prefix=settings.api_v1_str)
 @app.get("/")
 def root():
     return {"message": "FastAPI Backend is running", "docs": "/docs"}
