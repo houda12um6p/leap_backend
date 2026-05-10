@@ -1,14 +1,15 @@
 from datetime import datetime, timezone
+from pathlib import Path
 import json
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.dependencies import get_current_user
 from ..models.compte_rendu import CompteRendu
 from ..models.user import User
 from ..services.compte_rendu_service import analyze_compte_rendu
+from ..services.file_extractor import extract_text
 from pydantic import BaseModel
-from typing import Optional
 
 router = APIRouter(prefix="/projects", tags=["compte_rendus"])
 
@@ -36,17 +37,11 @@ def serialize_cr(cr: CompteRendu) -> dict:
         "days_remaining": max(0, (expires_at - now).days)
     }
 
-@router.post("/{project_id}/compte-rendus", status_code=201)
-async def create_compte_rendu(
-    project_id: str,
-    body: CompteRenduCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    result = await analyze_compte_rendu(body.raw_text)
+async def _build_and_save_cr(project_id: str, raw_text: str, db: Session) -> CompteRendu:
+    result = await analyze_compte_rendu(raw_text)
     cr = CompteRendu(
         project_id=project_id,
-        raw_text=body.raw_text,
+        raw_text=raw_text,
         language=result.get("language", "fr"),
         decisions=json.dumps(result.get("decisions", []), ensure_ascii=False),
         actions=json.dumps(result.get("actions", []), ensure_ascii=False),
@@ -56,6 +51,60 @@ async def create_compte_rendu(
     db.add(cr)
     db.commit()
     db.refresh(cr)
+    return cr
+
+@router.post("/{project_id}/compte-rendus", status_code=201)
+async def create_compte_rendu(
+    project_id: str,
+    body: CompteRenduCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    cr = await _build_and_save_cr(project_id, body.raw_text, db)
+    return serialize_cr(cr)
+
+@router.post("/{project_id}/compte-rendus/upload", status_code=201)
+async def create_compte_rendu_from_file(
+    project_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    allowed = {".pdf", ".docx", ".doc", ".txt"}
+    ext = Path(file.filename).suffix.lower()
+    if ext not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported file type '{ext}'. Allowed: pdf, docx, doc, txt"
+        )
+
+    file_bytes = await file.read()
+    if len(file_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="File too large. Maximum size is 10MB."
+        )
+
+    try:
+        raw_text = extract_text(file.filename, file_bytes)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Could not read file: {str(e)}"
+        )
+
+    if len(raw_text.strip()) < 30:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Extracted text is too short. Is the file empty or scanned without OCR?"
+        )
+
+    cr = await _build_and_save_cr(project_id, raw_text, db)
     return serialize_cr(cr)
 
 @router.get("/{project_id}/compte-rendus")
