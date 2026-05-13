@@ -22,6 +22,8 @@ class AlertResponse(AlertBase):
     id: str
     project_id: str
     created_at: datetime
+    resolved_at: Optional[datetime] = None
+    resolved_by: Optional[str] = None
 
     class Config:
         from_attributes = True
