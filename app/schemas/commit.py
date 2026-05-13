@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from ..models.commit import CommitType
 
 
@@ -15,5 +15,5 @@ class CommitResponse(CommitBase):
     author_id: str
     merge_request_id: str
     commit_type: CommitType
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

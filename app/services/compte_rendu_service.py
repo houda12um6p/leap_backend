@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from ..core.config import settings
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "openai/gpt-oss-20b:free"
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 SYSTEM_PROMPT = """You are an expert meeting analyst. Analyze the meeting report and extract structured information.
 Respond ONLY with a valid JSON object, no explanation, no markdown, no backticks.

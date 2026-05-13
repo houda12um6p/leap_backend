@@ -1,0 +1,1 @@
+Réunion du 12 mai. Décision: migrer vers PostgreSQL. Action: Karim installe PostgreSQL avant lundi. Blocage: serveur de staging down.

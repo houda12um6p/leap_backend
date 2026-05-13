@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -16,7 +16,13 @@ from ..services.llm_service import classify_comment
 def _parse_iso(value: Optional[str]) -> Optional[datetime]:
     if not value:
         return None
-    return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+    s = value
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _parse_repo_url(url: str) -> Optional[Tuple[str, str]]:
@@ -200,7 +206,7 @@ class WebhookService:
             jira_task.status = new_status
             if story_points:
                 jira_task.story_points = story_points
-            jira_task.updated_at = datetime.utcnow()
+            jira_task.updated_at = datetime.now(timezone.utc)
             self.db.commit()
             return {
                 "status": "success",
@@ -215,8 +221,8 @@ class WebhookService:
             status=new_status,
             story_points=story_points,
             project_id=None,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         self.db.add(new_task)
         self.db.commit()

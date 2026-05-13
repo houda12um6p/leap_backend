@@ -65,11 +65,21 @@ def calculate_developer_score(user_id: str, db: Session, project_id: str = None)
             detail=f"User {user_id} not found",
         )
 
-    mrs = (
-        db.query(MergeRequest)
-        .filter(MergeRequest.author_id == user_id)
-        .all()
-    )
+    if project_id:
+        mrs = (
+            db.query(MergeRequest)
+            .filter(
+                MergeRequest.author_id == user_id,
+                MergeRequest.project_id == project_id,
+            )
+            .all()
+        )
+    else:
+        mrs = (
+            db.query(MergeRequest)
+            .filter(MergeRequest.author_id == user_id)
+            .all()
+        )
     if not mrs:
         user.total_score = 0.0
         db.commit()

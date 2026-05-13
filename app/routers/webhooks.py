@@ -23,7 +23,11 @@ async def verify_github_signature(
 ):
     secret = settings.github_webhook_secret
     if not secret:
-        return
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GITHUB_WEBHOOK_SECRET is not configured. "
+                   "Set it in .env before using webhooks.",
+        )
     if not x_hub_signature_256:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

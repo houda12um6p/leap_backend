@@ -1,10 +1,10 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 try:
     from pydantic import EmailStr
 except ImportError:
-    EmailStr = str  
+    EmailStr = str
     
 from ..models.user import UserRole
 
@@ -28,8 +28,7 @@ class UserResponse(UserBase):
     total_score: float
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserLogin(BaseModel):
     email: str

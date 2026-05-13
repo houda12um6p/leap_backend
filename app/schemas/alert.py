@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 class AlertBase(BaseModel):
@@ -25,5 +25,4 @@ class AlertResponse(AlertBase):
     resolved_at: Optional[datetime] = None
     resolved_by: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

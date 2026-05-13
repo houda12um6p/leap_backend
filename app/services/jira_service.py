@@ -3,10 +3,15 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..models.jira_task import JiraTask
 from ..models.merge_request import MergeRequest
-from datetime import datetime
+from datetime import datetime, timezone
 
-def _parse_dt(s: str):
-    return datetime.fromisoformat(s.replace('Z', '+00:00')).replace(tzinfo=None)
+def _parse_dt(s: str) -> datetime:
+    if s.endswith('Z'):
+        s = s[:-1] + '+00:00'
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 def _get_auth():
     return (settings.jira_email, settings.jira_api_token)
@@ -110,8 +115,8 @@ class JiraService:
                     status=task_data["status"],
                     story_points=task_data["story_points"],
                     project_id=project_id,
-                    created_at=_parse_dt(task_data["created_at"]) if task_data["created_at"] else datetime.utcnow(),
-                    updated_at=_parse_dt(task_data["updated_at"]) if task_data["updated_at"] else datetime.utcnow(),
+                    created_at=_parse_dt(task_data["created_at"]) if task_data["created_at"] else datetime.now(timezone.utc),
+                    updated_at=_parse_dt(task_data["updated_at"]) if task_data["updated_at"] else datetime.now(timezone.utc),
                 )
                 self.db.add(new_task)
                 self.db.commit()
