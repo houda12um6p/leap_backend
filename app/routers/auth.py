@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel as _Base
 from sqlalchemy.orm import Session
 
 from ..core.database import get_db
@@ -28,3 +29,27 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)) -> dict[str, str
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+class ForgotPasswordRequest(_Base):
+    email: str
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    body: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    """
+    Always returns 200 regardless of whether the email exists.
+    This prevents user enumeration attacks.
+    In production this would send a reset email.
+    """
+    user = db.query(User).filter(User.email == body.email).first()
+    if user:
+        # TODO: send reset email via SMTP when configured
+        pass
+    return {
+        "message": "Si cette adresse existe, vous recevrez "
+                   "un email avec les instructions."
+    }
