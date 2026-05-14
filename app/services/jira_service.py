@@ -43,14 +43,37 @@ def _require_jira_settings() -> None:
 class JiraService:
     def __init__(self, db: Session) -> None:
         self.db = db
+        self._sp_field: str | None = None
+
+    def _detect_story_points_field(self) -> str:
+        """Auto-detect the story points custom field ID for this Jira instance."""
+        try:
+            resp = httpx.get(
+                f"{_get_base_url()}/rest/api/3/field",
+                auth=_get_auth(),
+                timeout=10.0,
+            )
+            if resp.status_code != 200:
+                return "customfield_10016"
+            fields = resp.json()
+            for field in fields:
+                name = field.get("name", "").lower()
+                if "story point" in name or name == "story points":
+                    return field["id"]
+            return "customfield_10016"
+        except Exception:
+            return "customfield_10016"
 
     def fetch_tasks(self) -> list[dict[str, Any]]:
         _require_jira_settings()
+        if self._sp_field is None:
+            self._sp_field = self._detect_story_points_field()
+        sp_field = self._sp_field
         url = f"{_get_base_url()}/rest/api/3/search/jql"
         payload = {
             "jql": f"project={settings.jira_project_key} ORDER BY created DESC",
             "maxResults": 50,
-            "fields": ["summary", "status", "customfield_10016", "created", "updated"],
+            "fields": ["summary", "status", sp_field, "customfield_10016", "created", "updated"],
         }
         response = httpx.post(url, json=payload, auth=_get_auth())
         response.raise_for_status()
@@ -59,7 +82,12 @@ class JiraService:
         tasks = []
         for issue in data.get("issues", []):
             fields = issue.get("fields", {})
-            story_points = fields.get("customfield_10016") or fields.get("story_points") or 0
+            story_points = (
+                fields.get(sp_field) or
+                fields.get("customfield_10016") or
+                fields.get("story_points") or
+                0
+            )
             tasks.append({
                 "jira_key": issue["key"],
                 "summary": fields.get("summary", ""),
