@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -41,21 +41,32 @@ def sync_jira_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    service = JiraService(db)
-    synced = service.sync_tasks(req.project_id)
-    return {
-        "status": "success",
-        "synced_count": len(synced),
-        "tasks": [
-            {
-                "jira_key": t.jira_key,
-                "summary": t.summary,
-                "status": t.status,
-                "story_points": t.story_points,
-            }
-            for t in synced
-        ],
-    }
+    try:
+        service = JiraService(db)
+        synced = service.sync_tasks(req.project_id)
+        return {
+            "status": "success",
+            "synced_count": len(synced),
+            "tasks": [
+                {
+                    "jira_key": t.jira_key,
+                    "summary": t.summary,
+                    "status": t.status,
+                    "story_points": t.story_points,
+                }
+                for t in synced
+            ],
+        }
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Jira API error: {str(e)}",
+        ) from e
 
 
 @router.get("/sprints")
@@ -64,9 +75,20 @@ def get_sprints(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    service = JiraService(db)
-    sprints = service.fetch_sprints(project_key=project_key)
-    return {"status": "success", "sprints": sprints}
+    try:
+        service = JiraService(db)
+        sprints = service.fetch_sprints(project_key=project_key)
+        return {"status": "success", "sprints": sprints}
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Jira API error: {str(e)}",
+        ) from e
 
 
 @router.post("/link")

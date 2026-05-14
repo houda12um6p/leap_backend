@@ -1,11 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
-
-try:
-    from pydantic import EmailStr
-except ImportError:
-    EmailStr = str
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from ..models.user import UserRole
 

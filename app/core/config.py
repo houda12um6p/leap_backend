@@ -22,6 +22,10 @@ class Settings(BaseSettings):
 
     api_v1_str: str = "/api/v1"
     project_name: str = "FastAPI Backend"
+    cors_origins: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
 
     github_api_url: str = "https://api.github.com"
     github_token: str = ""

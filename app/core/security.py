@@ -1,9 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
-try:
-    from jose import JWTError, jwt
-except ImportError:
-    from python_jose import JWTError, jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from .config import settings

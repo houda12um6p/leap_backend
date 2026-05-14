@@ -12,7 +12,7 @@ class ProjectBase(BaseModel):
     @field_validator("repo_url")
     @classmethod
     def validate_github_url(cls, v: str) -> str:
-        pattern = r'^https?://(www\.)?github\.com/[\w.\-]+/[\w.\-]+'
+        pattern = r'^https?://(www\.)?github\.com/[\w.\-]+/[\w.\-]+$'
         if not re.match(pattern, v):
             raise ValueError(
                 "repo_url must be a valid GitHub repository URL "

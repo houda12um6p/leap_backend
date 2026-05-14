@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.dependencies import get_current_user
 from ..models.compte_rendu import CompteRendu
+from ..models.project import Project
 from ..models.user import User
 from ..services.compte_rendu_service import analyze_compte_rendu
 from ..services.file_extractor import extract_text
@@ -66,6 +67,12 @@ async def create_compte_rendu(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found",
+        )
     cr = await _build_and_save_cr(project_id, body.raw_text, db)
     return serialize_cr(cr)
 
@@ -77,6 +84,12 @@ async def create_compte_rendu_from_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project {project_id} not found",
+        )
     allowed = {".pdf", ".docx", ".doc", ".txt"}
     ext = Path(file.filename).suffix.lower()
     if ext not in allowed:

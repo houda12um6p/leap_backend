@@ -23,10 +23,7 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,8 +39,8 @@ app.include_router(scores.router, prefix=settings.api_v1_str)
 app.include_router(merge_requests.router, prefix=settings.api_v1_str)
 app.include_router(compte_rendus.router, prefix=settings.api_v1_str)
 @app.get("/")
-def root():
+def root() -> dict[str, str]:
     return {"message": "FastAPI Backend is running", "docs": "/docs"}
 @app.get("/health")
-def health_check():
+def health_check() -> dict[str, str]:
     return {"status":"healthy", "service": settings.project_name}

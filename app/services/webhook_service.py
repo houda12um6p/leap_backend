@@ -41,6 +41,8 @@ def _find_project_by_repo(db: Session, repo_full_name: str) -> Project | None:
     if not repo_full_name:
         return None
     needle = repo_full_name.lower()
+    # NOTE: full table scan — acceptable for small project count.
+    # For production scale, add an index on Project.repo_url.
     for p in db.query(Project).all():
         if needle in (p.repo_url or "").lower():
             return p

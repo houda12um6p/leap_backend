@@ -50,6 +50,6 @@ def forgot_password(
         # TODO: send reset email via SMTP when configured
         pass
     return {
-        "message": "Si cette adresse existe, vous recevrez "
-                   "un email avec les instructions."
+        "message": "If this address exists, you will receive "
+                   "an email with reset instructions."
     }
