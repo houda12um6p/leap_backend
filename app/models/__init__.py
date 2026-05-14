@@ -1,11 +1,11 @@
-from .user import User, UserRole
-from .project import Project, ProjectStatus
+from .alert import Alert, AlertSeverity
+from .commit import Commit, CommitType
+from .compte_rendu import CompteRendu
 from .jira_task import JiraTask
 from .merge_request import MergeRequest, MergeRequestStatus
-from .commit import Commit, CommitType
+from .project import Project, ProjectStatus
 from .review_comment import ReviewComment
-from .alert import Alert, AlertSeverity
-from .compte_rendu import CompteRendu
+from .user import User, UserRole
 
 __all__ = [
     "User", "UserRole",

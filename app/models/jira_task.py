@@ -1,8 +1,10 @@
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
-from ..core.database import Base
 import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+from ..core.database import Base
 
 
 class JiraTask(Base):
@@ -13,6 +15,6 @@ class JiraTask(Base):
     status       = Column(String, nullable=False)
     story_points = Column(Integer, default=0)
     project_id   = Column(String(36), ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
-    created_at   = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at   = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at   = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    updated_at   = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     merge_requests = relationship("MergeRequest", back_populates="jira_task")

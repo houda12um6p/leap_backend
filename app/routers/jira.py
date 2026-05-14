@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.dependencies import get_current_user
 from ..models.jira_task import JiraTask
+from ..models.user import User
 from ..services.jira_service import JiraService
 
 router = APIRouter(prefix="/jira", tags=["jira"])
@@ -17,7 +18,11 @@ class SyncRequest(BaseModel):
 
 
 @router.get("/tasks/{project_id}")
-def get_jira_tasks(project_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_jira_tasks(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
     tasks = db.query(JiraTask).filter(JiraTask.project_id == project_id).all()
     return [
         {
@@ -31,7 +36,11 @@ def get_jira_tasks(project_id: str, db: Session = Depends(get_db), current_user=
 
 
 @router.post("/sync/tasks")
-def sync_jira_tasks(req: SyncRequest, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def sync_jira_tasks(
+    req: SyncRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
     service = JiraService(db)
     synced = service.sync_tasks(req.project_id)
     return {
@@ -51,17 +60,22 @@ def sync_jira_tasks(req: SyncRequest, db: Session = Depends(get_db), current_use
 
 @router.get("/sprints")
 def get_sprints(
-    project_key: Optional[str] = None,
+    project_key: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-):
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
     service = JiraService(db)
     sprints = service.fetch_sprints(project_key=project_key)
     return {"status": "success", "sprints": sprints}
 
 
 @router.post("/link")
-def link_mr_to_task(mr_id: str, jira_key: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def link_mr_to_task(
+    mr_id: str,
+    jira_key: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
     service = JiraService(db)
     mr = service.link_merge_request_to_jira_task(mr_id, jira_key)
     if not mr:

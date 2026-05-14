@@ -1,0 +1,14 @@
+{
+  "include": ["app"],
+  "exclude": ["**/__pycache__", ".venv"],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "All",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": true,
+  "reportUnusedVariable": true,
+  "reportUndefinedVariable": true,
+  "venvPath": ".",
+  "venv": ".venv"
+}

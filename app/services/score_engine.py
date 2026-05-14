@@ -55,7 +55,7 @@ def calculate_mr_score(mr_id: str, db: Session) -> float:
     return score
 
 
-def calculate_developer_score(user_id: str, db: Session, project_id: str = None) -> float:
+def calculate_developer_score(user_id: str, db: Session, project_id: str | None = None) -> float:
     """Sum of this developer's MR scores. Persists to User.total_score.
     """
     user = db.query(User).filter(User.id == user_id).first()
@@ -95,7 +95,7 @@ def calculate_developer_score(user_id: str, db: Session, project_id: str = None)
     return total
 
 
-def _ensure_low_score_alert(db: Session, user: User, score: float, project_id: str):
+def _ensure_low_score_alert(db: Session, user: User, score: float, project_id: str) -> None:
     """Create a high alert if no open low-score alert exists for this dev+project."""
     existing = (
         db.query(Alert)

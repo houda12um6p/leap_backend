@@ -1,6 +1,6 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
 
 
 class ReviewCommentBase(BaseModel):
@@ -15,8 +15,8 @@ class ReviewCommentCreate(ReviewCommentBase):
 
 
 class ReviewCommentUpdate(BaseModel):
-    body: Optional[str] = None
-    severity_weight: Optional[int] = None
+    body: str | None = None
+    severity_weight: int | None = None
 
 
 class ReviewCommentResponse(ReviewCommentBase):

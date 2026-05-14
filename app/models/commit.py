@@ -1,7 +1,9 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
-from ..core.database import Base
 import enum
+
+from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy.orm import relationship
+
+from ..core.database import Base
 
 
 class CommitType(str, enum.Enum):

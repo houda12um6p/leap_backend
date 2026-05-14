@@ -19,10 +19,10 @@ class Settings(BaseSettings):
                 "Set a strong SECRET_KEY in the environment (.env) before starting."
             )
         return v
-    
+
     api_v1_str: str = "/api/v1"
     project_name: str = "FastAPI Backend"
-    
+
     github_api_url: str = "https://api.github.com"
     github_token: str = ""
     github_webhook_secret: str = ""

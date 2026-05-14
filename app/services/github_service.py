@@ -1,7 +1,7 @@
 import re
 import secrets
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 from sqlalchemy.orm import Session
@@ -16,11 +16,11 @@ from .llm_service import classify_many
 
 
 class GitHubService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.api_url = settings.github_api_url
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -30,7 +30,7 @@ class GitHubService:
             headers["Authorization"] = f"Bearer {token}"
         return headers
 
-    def _map_pr_status(self, state: str, merged_at: Optional[str]) -> MergeRequestStatus:
+    def _map_pr_status(self, state: str, merged_at: str | None) -> MergeRequestStatus:
         if merged_at:
             return MergeRequestStatus.MERGED
         s = (state or "").lower()
@@ -54,7 +54,7 @@ class GitHubService:
         return user
 
     @staticmethod
-    def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+    def _parse_iso(value: str | None) -> datetime | None:
         if not value:
             return None
         s = value
@@ -62,11 +62,11 @@ class GitHubService:
             s = s[:-1] + '+00:00'
         dt = datetime.fromisoformat(s)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt
 
     @staticmethod
-    def _next_url(link_header: Optional[str]) -> Optional[str]:
+    def _next_url(link_header: str | None) -> str | None:
         if not link_header:
             return None
         for part in link_header.split(","):
@@ -83,11 +83,11 @@ class GitHubService:
         self,
         client: httpx.AsyncClient,
         url: str,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
-        items: List[Dict[str, Any]] = []
-        next_url: Optional[str] = url
-        next_params: Optional[Dict[str, Any]] = {**(params or {}), "per_page": 100}
+        params: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        next_url: str | None = url
+        next_params: dict[str, Any] | None = {**(params or {}), "per_page": 100}
         while next_url:
             resp = await client.get(next_url, headers=self._headers(), params=next_params)
             resp.raise_for_status()
@@ -99,7 +99,7 @@ class GitHubService:
             next_params = None
         return items
 
-    async def fetch_branches(self, repo_owner: str, repo_name: str) -> List[Dict[str, Any]]:
+    async def fetch_branches(self, repo_owner: str, repo_name: str) -> list[dict[str, Any]]:
         async with httpx.AsyncClient(timeout=30) as client:
             raw = await self._get_all(
                 client,
@@ -107,7 +107,7 @@ class GitHubService:
             )
             return [{"name": b["name"], "commit": b["commit"]} for b in raw]
 
-    async def fetch_commits(self, repo_owner: str, repo_name: str) -> List[Dict[str, Any]]:
+    async def fetch_commits(self, repo_owner: str, repo_name: str) -> list[dict[str, Any]]:
         async with httpx.AsyncClient(timeout=60) as client:
             raw = await self._get_all(
                 client,
@@ -132,8 +132,8 @@ class GitHubService:
         client: httpx.AsyncClient,
         repo_owner: str,
         repo_name: str,
-        pr_summary: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        pr_summary: dict[str, Any],
+    ) -> dict[str, Any]:
         number = pr_summary["number"]
         detail_resp = await client.get(
             f"{self.api_url}/repos/{repo_owner}/{repo_name}/pulls/{number}",
@@ -145,7 +145,7 @@ class GitHubService:
             client,
             f"{self.api_url}/repos/{repo_owner}/{repo_name}/pulls/{number}/commits",
         )
-        commits: List[Dict[str, Any]] = []
+        commits: list[dict[str, Any]] = []
         for c in commits_raw:
             author_block = (c.get("commit") or {}).get("author") or {}
             commits.append({
@@ -177,14 +177,14 @@ class GitHubService:
             "commits": commits,
         }
 
-    async def fetch_pull_requests(self, repo_owner: str, repo_name: str) -> List[Dict[str, Any]]:
+    async def fetch_pull_requests(self, repo_owner: str, repo_name: str) -> list[dict[str, Any]]:
         async with httpx.AsyncClient(timeout=60) as client:
             summaries = await self._get_all(
                 client,
                 f"{self.api_url}/repos/{repo_owner}/{repo_name}/pulls",
                 params={"state": "all"},
             )
-            enriched: List[Dict[str, Any]] = []
+            enriched: list[dict[str, Any]] = []
             for pr in summaries:
                 enriched.append(await self._enrich_pr(client, repo_owner, repo_name, pr))
             return enriched
@@ -194,7 +194,7 @@ class GitHubService:
         repo_owner: str,
         repo_name: str,
         pr_number: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=60) as client:
             resp = await client.get(
                 f"{self.api_url}/repos/{repo_owner}/{repo_name}/pulls/{pr_number}",
@@ -203,7 +203,7 @@ class GitHubService:
             resp.raise_for_status()
             return await self._enrich_pr(client, repo_owner, repo_name, resp.json())
 
-    def _upsert_pr(self, project_id: str, pr: Dict[str, Any]) -> MergeRequest:
+    def _upsert_pr(self, project_id: str, pr: dict[str, Any]) -> MergeRequest:
         mr_author = self._get_or_create_user(pr["author"]["email"], pr["author"]["name"])
         mr_status = self._map_pr_status(pr["state"], pr.get("merged_at"))
         lines_modified = (pr.get("additions") or 0) + (pr.get("deletions") or 0)
@@ -248,7 +248,7 @@ class GitHubService:
                 message=cd["message"],
                 author_id=commit_author.id,
                 merge_request_id=mr.id,
-                date=self._parse_iso(cd["date"]) or datetime.now(timezone.utc),
+                date=self._parse_iso(cd["date"]) or datetime.now(UTC),
             ))
 
         keys = re.findall(r"[A-Z]+-\d+", mr.title or "")
@@ -269,9 +269,9 @@ class GitHubService:
         repo_owner: str,
         repo_name: str,
         project_id: str,
-    ) -> List[MergeRequest]:
+    ) -> list[MergeRequest]:
         prs_data = await self.fetch_pull_requests(repo_owner, repo_name)
-        synced: List[MergeRequest] = [self._upsert_pr(project_id, pr) for pr in prs_data]
+        synced: list[MergeRequest] = [self._upsert_pr(project_id, pr) for pr in prs_data]
         self.db.commit()
         return synced
 
@@ -292,14 +292,14 @@ class GitHubService:
         repo_owner: str,
         repo_name: str,
         project_id: str,
-    ) -> List[Commit]:
+    ) -> list[Commit]:
         await self.sync_pull_requests(repo_owner, repo_name, project_id)
         mr_ids = [
             mr.id for mr in self.db.query(MergeRequest)
             .filter(MergeRequest.project_id == project_id).all()
         ]
 
-        
+
         if not mr_ids:
             return []
         return self.db.query(Commit).filter(Commit.merge_request_id.in_(mr_ids)).all()
@@ -309,7 +309,7 @@ class GitHubService:
         repo_owner: str,
         repo_name: str,
         project_id: str,
-    ) -> dict:
+    ) -> dict[str, Any]:
         mrs = (
             self.db.query(MergeRequest)
             .filter(
@@ -319,7 +319,7 @@ class GitHubService:
             .all()
         )
 
-        pending: List[Dict[str, Any]] = []
+        pending: list[dict[str, Any]] = []
         async with httpx.AsyncClient(timeout=60) as client:
             for mr in mrs:
                 comments_raw = await self._get_all(
@@ -343,11 +343,11 @@ class GitHubService:
                     pending.append({
                         "mr_id": mr.id,
                         "body": body,
-                        "created_at": self._parse_iso(c.get("created_at")) or datetime.now(timezone.utc),
+                        "created_at": self._parse_iso(c.get("created_at")) or datetime.now(UTC),
                     })
 
         weights = await classify_many([p["body"] for p in pending])
-        for entry, weight in zip(pending, weights):
+        for entry, weight in zip(pending, weights, strict=False):
             self.db.add(ReviewComment(
                 body=entry["body"],
                 severity_weight=weight,

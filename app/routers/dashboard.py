@@ -1,5 +1,6 @@
 from datetime import timedelta
-from typing import Any, Dict, List
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -19,7 +20,7 @@ def get_overview(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -93,14 +94,14 @@ def get_scores(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     merge_requests = db.query(MergeRequest).filter(MergeRequest.project_id == project_id).all()
 
-    buckets: Dict[str, Dict[str, Any]] = {}
+    buckets: dict[str, dict[str, Any]] = {}
     for mr in merge_requests:
         if not mr.author_id:
             continue
@@ -121,7 +122,7 @@ def get_scores(
                 buckets[u.id]["name"] = u.name
                 buckets[u.id]["email"] = u.email
 
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for b in buckets.values():
         scores = b.pop("_scores")
         total = round(sum(scores), 2) if scores else 0.0
@@ -138,14 +139,14 @@ def get_timeline(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
     merge_requests = db.query(MergeRequest).filter(MergeRequest.project_id == project_id).all()
 
-    weeks: Dict[str, Dict[str, Any]] = {}
+    weeks: dict[str, dict[str, Any]] = {}
     for mr in merge_requests:
         day = mr.created_at.date()
         week_start = (day - timedelta(days=day.weekday())).isoformat()

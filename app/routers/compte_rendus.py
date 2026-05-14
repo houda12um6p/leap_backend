@@ -1,27 +1,31 @@
-from datetime import datetime, timezone
-from pathlib import Path
 import json
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
 from ..core.database import get_db
 from ..core.dependencies import get_current_user
 from ..models.compte_rendu import CompteRendu
 from ..models.user import User
 from ..services.compte_rendu_service import analyze_compte_rendu
 from ..services.file_extractor import extract_text
-from pydantic import BaseModel
 
 router = APIRouter(prefix="/projects", tags=["compte_rendus"])
+
 
 class CompteRenduCreate(BaseModel):
     raw_text: str
 
-def serialize_cr(cr: CompteRendu) -> dict:
-    now = datetime.now(timezone.utc)
+
+def serialize_cr(cr: CompteRendu) -> dict[str, Any]:
+    now = datetime.now(UTC)
     expires_at = cr.expires_at
     if expires_at.tzinfo is None:
-        from datetime import timezone as tz
-        expires_at = expires_at.replace(tzinfo=tz.utc)
+        expires_at = expires_at.replace(tzinfo=UTC)
     return {
         "id": cr.id,
         "project_id": cr.project_id,
@@ -36,6 +40,7 @@ def serialize_cr(cr: CompteRendu) -> dict:
         "is_active": now < expires_at,
         "days_remaining": max(0, (expires_at - now).days)
     }
+
 
 async def _build_and_save_cr(project_id: str, raw_text: str, db: Session) -> CompteRendu:
     result = await analyze_compte_rendu(raw_text)
@@ -53,23 +58,25 @@ async def _build_and_save_cr(project_id: str, raw_text: str, db: Session) -> Com
     db.refresh(cr)
     return cr
 
+
 @router.post("/{project_id}/compte-rendus", status_code=201)
 async def create_compte_rendu(
     project_id: str,
     body: CompteRenduCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
     cr = await _build_and_save_cr(project_id, body.raw_text, db)
     return serialize_cr(cr)
+
 
 @router.post("/{project_id}/compte-rendus/upload", status_code=201)
 async def create_compte_rendu_from_file(
     project_id: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
     allowed = {".pdf", ".docx", ".doc", ".txt"}
     ext = Path(file.filename).suffix.lower()
     if ext not in allowed:
@@ -91,12 +98,12 @@ async def create_compte_rendu_from_file(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e)
-        )
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Could not read file: {str(e)}"
-        )
+        ) from e
 
     if len(raw_text.strip()) < 30:
         raise HTTPException(
@@ -107,24 +114,26 @@ async def create_compte_rendu_from_file(
     cr = await _build_and_save_cr(project_id, raw_text, db)
     return serialize_cr(cr)
 
+
 @router.get("/{project_id}/compte-rendus")
 def get_compte_rendus(
     project_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
     crs = db.query(CompteRendu).filter(
         CompteRendu.project_id == project_id
     ).order_by(CompteRendu.created_at.desc()).all()
     return [serialize_cr(cr) for cr in crs]
 
+
 @router.get("/{project_id}/compte-rendus/active")
 def get_active_compte_rendus(
     project_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    now = datetime.now(timezone.utc)
+    current_user: User = Depends(get_current_user),
+) -> list[dict[str, Any]]:
+    now = datetime.now(UTC)
     crs = db.query(CompteRendu).filter(
         CompteRendu.project_id == project_id,
         CompteRendu.expires_at > now

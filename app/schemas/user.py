@@ -1,11 +1,12 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+
 try:
     from pydantic import EmailStr
 except ImportError:
     EmailStr = str
-    
+
 from ..models.user import UserRole
 
 
@@ -18,10 +19,10 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    role: Optional[UserRole] = None
-    total_score: Optional[float] = None
+    name: str | None = None
+    email: str | None = None
+    role: UserRole | None = None
+    total_score: float | None = None
 
 class UserResponse(UserBase):
     id: str

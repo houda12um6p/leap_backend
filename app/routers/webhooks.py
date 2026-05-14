@@ -20,7 +20,7 @@ class WebhookResponse(BaseModel):
 async def verify_github_signature(
     request: Request,
     x_hub_signature_256: str = Header(None),
-):
+) -> None:
     secret = settings.github_webhook_secret
     if not secret:
         raise HTTPException(
@@ -49,7 +49,7 @@ async def github_push_webhook(
     request: Request,
     db: Session = Depends(get_db),
     _: None = Depends(verify_github_signature),
-):
+) -> WebhookResponse:
     payload = await request.json()
     service = WebhookService(db)
     result = await service.handle_github_push(payload)
@@ -71,7 +71,7 @@ async def github_pull_request_webhook(
     request: Request,
     db: Session = Depends(get_db),
     _: None = Depends(verify_github_signature),
-):
+) -> WebhookResponse:
     payload = await request.json()
     service = WebhookService(db)
     result = await service.handle_github_pull_request(payload)
@@ -96,7 +96,7 @@ async def github_review_comment_webhook(
     request: Request,
     db: Session = Depends(get_db),
     _: None = Depends(verify_github_signature),
-):
+) -> WebhookResponse:
     payload = await request.json()
     service = WebhookService(db)
     result = await service.handle_github_review_comment(payload)
@@ -117,7 +117,10 @@ async def github_review_comment_webhook(
 
 
 @router.post("/jira/issue-updated", response_model=WebhookResponse)
-async def jira_issue_webhook(request: Request, db: Session = Depends(get_db)):
+async def jira_issue_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> WebhookResponse:
     payload = await request.json()
     service = WebhookService(db)
     result = await service.handle_jira_issue_updated(payload)

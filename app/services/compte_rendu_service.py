@@ -1,7 +1,10 @@
-import json
 import asyncio
+import json
+from typing import Any
+
 import httpx
 from fastapi import HTTPException
+
 from ..core.config import settings
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -27,7 +30,7 @@ _MAX_RETRIES = 4
 _BASE_DELAY = 12  # seconds
 
 
-async def analyze_compte_rendu(raw_text: str) -> dict:
+async def analyze_compte_rendu(raw_text: str) -> dict[str, Any]:
     if not settings.openrouter_api_key:
         return {
             "language": "fr",

@@ -1,8 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .core.config import settings
-from .routers import auth, github, jira, webhooks, projects, alerts, dashboard, scores, merge_requests, compte_rendus
 from .core.database import Base, engine
+from .routers import (
+    alerts,
+    auth,
+    compte_rendus,
+    dashboard,
+    github,
+    jira,
+    merge_requests,
+    projects,
+    scores,
+    webhooks,
+)
+
 Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title=settings.project_name,

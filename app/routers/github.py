@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,7 +21,7 @@ class SyncRequest(BaseModel):
 
 class BranchResponse(BaseModel):
     name: str
-    commit: Dict[str, Any]
+    commit: dict[str, Any]
 
 
 @router.post("/sync/commits")
@@ -29,7 +29,7 @@ async def sync_commits(
     sync_request: SyncRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict[str, Any]:
     service = GitHubService(db)
     try:
         commits = await service.sync_commits(
@@ -42,12 +42,12 @@ async def sync_commits(
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"GitHub API error: {e.response.status_code} for {e.request.url}"
-        )
+        ) from e
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=503,
             detail=f"Could not reach GitHub: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/sync/pull-requests")
@@ -55,7 +55,7 @@ async def sync_pull_requests(
     sync_request: SyncRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict[str, Any]:
     service = GitHubService(db)
     try:
         pull_requests = await service.sync_pull_requests(
@@ -68,12 +68,12 @@ async def sync_pull_requests(
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"GitHub API error: {e.response.status_code} for {e.request.url}"
-        )
+        ) from e
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=503,
             detail=f"Could not reach GitHub: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/sync/review-comments")
@@ -81,7 +81,7 @@ async def sync_review_comments(
     sync_request: SyncRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict[str, Any]:
     service = GitHubService(db)
     try:
         result = await service.sync_review_comments(
@@ -94,21 +94,21 @@ async def sync_review_comments(
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"GitHub API error: {e.response.status_code} for {e.request.url}"
-        )
+        ) from e
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=503,
             detail=f"Could not reach GitHub: {str(e)}"
-        )
+        ) from e
 
 
-@router.get("/branches", response_model=List[BranchResponse])
+@router.get("/branches", response_model=list[BranchResponse])
 async def get_branches(
     repo_owner: str,
     repo_name: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list[BranchResponse]:
     service = GitHubService(db)
     try:
         branches = await service.fetch_branches(repo_owner, repo_name)
@@ -117,9 +117,9 @@ async def get_branches(
         raise HTTPException(
             status_code=e.response.status_code,
             detail=f"GitHub API error: {e.response.status_code} for {e.request.url}"
-        )
+        ) from e
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=503,
             detail=f"Could not reach GitHub: {str(e)}"
-        )
+        ) from e

@@ -1,5 +1,5 @@
+
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
 
 
 class JiraTaskBase(BaseModel):
@@ -14,10 +14,10 @@ class JiraTaskCreate(JiraTaskBase):
 
 
 class JiraTaskUpdate(BaseModel):
-    jira_key: Optional[str] = None
-    summary: Optional[str] = None
-    status: Optional[str] = None
-    story_points: Optional[int] = None
+    jira_key: str | None = None
+    summary: str | None = None
+    status: str | None = None
+    story_points: int | None = None
 
 class JiraTaskResponse(JiraTaskBase):
     id: str

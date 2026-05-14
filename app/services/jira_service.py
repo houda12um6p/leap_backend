@@ -1,25 +1,32 @@
+from datetime import UTC, datetime
+from typing import Any
+
 import httpx
 from sqlalchemy.orm import Session
+
 from ..core.config import settings
 from ..models.jira_task import JiraTask
 from ..models.merge_request import MergeRequest
-from datetime import datetime, timezone
+
 
 def _parse_dt(s: str) -> datetime:
     if s.endswith('Z'):
         s = s[:-1] + '+00:00'
     dt = datetime.fromisoformat(s)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
-def _get_auth():
+
+def _get_auth() -> tuple[str, str]:
     return (settings.jira_email, settings.jira_api_token)
 
-def _get_base_url():
+
+def _get_base_url() -> str:
     return settings.jira_base_url.rstrip('/')
 
-def _require_jira_settings():
+
+def _require_jira_settings() -> None:
     """Raise early with a clear message if Jira env vars are missing."""
     missing = [k for k, v in {
         "JIRA_BASE_URL":    settings.jira_base_url,
@@ -32,11 +39,12 @@ def _require_jira_settings():
             f"Jira is not configured. Missing env vars: {', '.join(missing)}"
         )
 
+
 class JiraService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
-    def fetch_tasks(self):
+    def fetch_tasks(self) -> list[dict[str, Any]]:
         _require_jira_settings()
         url = f"{_get_base_url()}/rest/api/3/search/jql"
         payload = {
@@ -62,7 +70,7 @@ class JiraService:
             })
         return tasks
 
-    def fetch_sprints(self, project_key: str = None):
+    def fetch_sprints(self, project_key: str | None = None) -> list[dict[str, Any]]:
         _require_jira_settings()
         key = project_key or settings.jira_project_key
         url = f"{_get_base_url()}/rest/agile/1.0/board"
@@ -90,7 +98,7 @@ class JiraService:
             for s in sprints
         ]
 
-    def sync_tasks(self, project_id: str):
+    def sync_tasks(self, project_id: str) -> list[JiraTask]:
         tasks = self.fetch_tasks()
         synced = []
 
@@ -115,8 +123,8 @@ class JiraService:
                     status=task_data["status"],
                     story_points=task_data["story_points"],
                     project_id=project_id,
-                    created_at=_parse_dt(task_data["created_at"]) if task_data["created_at"] else datetime.now(timezone.utc),
-                    updated_at=_parse_dt(task_data["updated_at"]) if task_data["updated_at"] else datetime.now(timezone.utc),
+                    created_at=_parse_dt(task_data["created_at"]) if task_data["created_at"] else datetime.now(UTC),
+                    updated_at=_parse_dt(task_data["updated_at"]) if task_data["updated_at"] else datetime.now(UTC),
                 )
                 self.db.add(new_task)
                 self.db.commit()
@@ -124,10 +132,10 @@ class JiraService:
 
         return synced
 
-    def find_jira_task_by_key(self, jira_key: str):
+    def find_jira_task_by_key(self, jira_key: str) -> JiraTask | None:
         return self.db.query(JiraTask).filter(JiraTask.jira_key == jira_key).first()
 
-    def link_merge_request_to_jira_task(self, mr_id: str, jira_key: str):
+    def link_merge_request_to_jira_task(self, mr_id: str, jira_key: str) -> MergeRequest | None:
         mr = self.db.query(MergeRequest).filter(MergeRequest.id == mr_id).first()
         task = self.find_jira_task_by_key(jira_key)
         if not mr or not task:

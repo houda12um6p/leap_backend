@@ -1,6 +1,6 @@
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,7 @@ from ..services.jira_service import JiraService
 from ..services.llm_service import classify_comment
 
 
-def _parse_iso(value: Optional[str]) -> Optional[datetime]:
+def _parse_iso(value: str | None) -> datetime | None:
     if not value:
         return None
     s = value
@@ -21,11 +21,11 @@ def _parse_iso(value: Optional[str]) -> Optional[datetime]:
         s = s[:-1] + '+00:00'
     dt = datetime.fromisoformat(s)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
-def _parse_repo_url(url: str) -> Optional[Tuple[str, str]]:
+def _parse_repo_url(url: str) -> tuple[str, str] | None:
     if not url:
         return None
     cleaned = url.strip().rstrip("/")
@@ -37,7 +37,7 @@ def _parse_repo_url(url: str) -> Optional[Tuple[str, str]]:
     return m.group(1), m.group(2)
 
 
-def _find_project_by_repo(db: Session, repo_full_name: str) -> Optional[Project]:
+def _find_project_by_repo(db: Session, repo_full_name: str) -> Project | None:
     if not repo_full_name:
         return None
     needle = repo_full_name.lower()
@@ -48,12 +48,12 @@ def _find_project_by_repo(db: Session, repo_full_name: str) -> Optional[Project]
 
 
 class WebhookService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.jira_service = JiraService(db)
         self.github_service = GitHubService(db)
 
-    async def handle_github_push(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_github_push(self, payload: dict[str, Any]) -> dict[str, Any]:
         repo_full_name = payload.get("repository", {}).get("full_name", "")
         project = _find_project_by_repo(self.db, repo_full_name)
         if project is None:
@@ -76,7 +76,7 @@ class WebhookService:
             "commits_processed": sum(len(c.commits) for c in synced),
         }
 
-    async def handle_github_pull_request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_github_pull_request(self, payload: dict[str, Any]) -> dict[str, Any]:
         action = payload.get("action")
         if action not in ("opened", "synchronize", "reopened", "closed", "edited"):
             return {"status": "ignored", "action": action}
@@ -108,7 +108,7 @@ class WebhookService:
             "jira_task_id": mr.jira_task_id,
         }
 
-    async def handle_github_review_comment(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_github_review_comment(self, payload: dict[str, Any]) -> dict[str, Any]:
         action = payload.get("action", "")
         if action not in ("created", "edited", "deleted"):
             return {"status": "ignored", "action": action}
@@ -174,7 +174,7 @@ class WebhookService:
             "severity_weight": weight,
         }
 
-    async def handle_jira_issue_updated(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def handle_jira_issue_updated(self, payload: dict[str, Any]) -> dict[str, Any]:
         event = payload.get("webhookEvent", "") or ""
         issue = payload.get("issue", {}) or {}
         jira_key = issue.get("key")
@@ -206,7 +206,7 @@ class WebhookService:
             jira_task.status = new_status
             if story_points:
                 jira_task.story_points = story_points
-            jira_task.updated_at = datetime.now(timezone.utc)
+            jira_task.updated_at = datetime.now(UTC)
             self.db.commit()
             return {
                 "status": "success",
@@ -221,8 +221,8 @@ class WebhookService:
             status=new_status,
             story_points=story_points,
             project_id=None,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         self.db.add(new_task)
         self.db.commit()

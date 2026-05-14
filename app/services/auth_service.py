@@ -1,17 +1,18 @@
-from typing import Optional
+from datetime import timedelta
 
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
+from ..core.config import settings
+from ..core.security import create_access_token, get_password_hash, verify_password
 from ..models.user import User
 from ..schemas.user import UserCreate, UserLogin
-from ..core.security import get_password_hash, verify_password, create_access_token
-from datetime import timedelta
-from ..core.config import settings
 
 
 class AuthService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
+
     def register_user(self, user_data: UserCreate) -> User:
         existing_user = self.db.query(User).filter(User.email == user_data.email).first()
         if existing_user:
@@ -49,5 +50,5 @@ class AuthService:
         )
         return access_token
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> User | None:
         return self.db.query(User).filter(User.email == email).first()

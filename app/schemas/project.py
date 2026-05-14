@@ -1,7 +1,8 @@
 import re
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, field_validator
-from typing import Optional
+
 
 class ProjectBase(BaseModel):
     name: str
@@ -30,9 +31,9 @@ class ProjectCreate(ProjectBase):
 
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    repo_url: Optional[str] = None
-    status: Optional[str] = None
+    name: str | None = None
+    repo_url: str | None = None
+    status: str | None = None
 
 
 class ProjectResponse(ProjectBase):

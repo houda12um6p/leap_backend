@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ from ..models.user import User
 router = APIRouter(tags=["merge_requests"])
 
 
-def _serialize_mr_summary(mr: MergeRequest, author: User | None) -> Dict[str, Any]:
+def _serialize_mr_summary(mr: MergeRequest, author: User | None) -> dict[str, Any]:
     return {
         "id": str(mr.id),
         "github_id": mr.github_id,
@@ -40,7 +40,7 @@ def list_project_merge_requests(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -52,7 +52,7 @@ def list_project_merge_requests(
         .all()
     )
     author_ids = {mr.author_id for mr in mrs if mr.author_id}
-    authors: Dict[str, User] = {}
+    authors: dict[str, User] = {}
     if author_ids:
         for u in db.query(User).filter(User.id.in_(author_ids)).all():
             authors[u.id] = u
@@ -64,7 +64,7 @@ def get_merge_request(
     mr_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     mr = db.query(MergeRequest).filter(MergeRequest.id == mr_id).first()
     if not mr:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Merge request not found")
@@ -77,7 +77,7 @@ def get_merge_request(
         .order_by(Commit.date.desc())
         .all()
     )
-    commit_authors: Dict[str, User] = {}
+    commit_authors: dict[str, User] = {}
     commit_author_ids = {c.author_id for c in commit_rows if c.author_id}
     if commit_author_ids:
         for u in db.query(User).filter(User.id.in_(commit_author_ids)).all():
@@ -101,7 +101,7 @@ def get_merge_request(
         .all()
     )
     review_author_ids = {r.author_id for r in review_rows if r.author_id}
-    review_authors: Dict[str, User] = {}
+    review_authors: dict[str, User] = {}
     if review_author_ids:
         for u in db.query(User).filter(User.id.in_(review_author_ids)).all():
             review_authors[u.id] = u

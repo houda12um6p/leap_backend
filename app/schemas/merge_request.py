@@ -1,10 +1,10 @@
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
 
 
 class MergeRequestBase(BaseModel):
-    github_id: Optional[int] = None
+    github_id: int | None = None
     title: str
     status: str
     score: float = 0.0
@@ -15,25 +15,25 @@ class MergeRequestBase(BaseModel):
 class MergeRequestCreate(MergeRequestBase):
     author_id: str
     project_id: str
-    jira_task_id: Optional[str] = None
+    jira_task_id: str | None = None
 
 
 class MergeRequestUpdate(BaseModel):
-    github_id: Optional[int] = None
-    title: Optional[str] = None
-    status: Optional[str] = None
-    score: Optional[float] = None
-    story_points: Optional[int] = None
-    refactored_lines: Optional[int] = None
-    lines_modified: Optional[int] = None
-    jira_task_id: Optional[str] = None
+    github_id: int | None = None
+    title: str | None = None
+    status: str | None = None
+    score: float | None = None
+    story_points: int | None = None
+    refactored_lines: int | None = None
+    lines_modified: int | None = None
+    jira_task_id: str | None = None
 
 
 class MergeRequestResponse(MergeRequestBase):
     id: str
     author_id: str
     project_id: str
-    jira_task_id: Optional[str] = None
+    jira_task_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

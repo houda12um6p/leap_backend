@@ -1,8 +1,11 @@
-from datetime import datetime, timezone, timedelta
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
-from ..core.database import Base
 import uuid
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import Column, DateTime, ForeignKey, String, Text
+from sqlalchemy.orm import relationship
+
+from ..core.database import Base
+
 
 class CompteRendu(Base):
     __tablename__ = "compte_rendus"
@@ -14,6 +17,6 @@ class CompteRendu(Base):
     actions = Column(Text, default="[]")     # JSON string
     blocages = Column(Text, default="[]")    # JSON string
     resume = Column(Text, default="")
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    expires_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc) + timedelta(days=7))
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    expires_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC) + timedelta(days=7))
     project = relationship("Project", backref="compte_rendus")

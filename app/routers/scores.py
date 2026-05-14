@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -20,7 +20,7 @@ def score_merge_request(
     mr_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     score = calculate_mr_score(mr_id, db)
     return {"mr_id": str(mr_id), "score": score}
 
@@ -28,10 +28,10 @@ def score_merge_request(
 @router.post("/developer/{user_id}/calculate")
 def score_developer(
     user_id: str,
-    project_id: Optional[str] = None,  # optional — needed for alert creation
+    project_id: str | None = None,  # optional — needed for alert creation
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     total = calculate_developer_score(user_id, db, project_id=project_id)
     return {"user_id": str(user_id), "total_score": total}
 
@@ -41,6 +41,6 @@ def score_project(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     project_total = calculate_project_score(project_id, db)
     return {"project_id": str(project_id), "project_total_score": project_total}

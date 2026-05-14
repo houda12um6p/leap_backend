@@ -1,6 +1,7 @@
 import asyncio
 
 import httpx
+
 from ..core.config import settings
 
 OPENROUTER_API_KEY = settings.openrouter_api_key

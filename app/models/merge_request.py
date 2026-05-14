@@ -1,11 +1,12 @@
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, Enum, UniqueConstraint
-from sqlalchemy.orm import relationship
-from ..core.database import Base
 import enum
 import re
 import uuid
-from typing import Optional
+from datetime import UTC, datetime
+
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy.orm import relationship
+
+from ..core.database import Base
 
 
 class MergeRequestStatus(str, enum.Enum):
@@ -29,15 +30,15 @@ class MergeRequest(Base):
     story_points = Column(Integer, default=0)
     refactored_lines = Column(Integer, default=0)
     lines_modified = Column(Integer, default=0)
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(UTC))
     author = relationship("User", back_populates="merge_requests")
     project = relationship("Project", back_populates="merge_requests")
     jira_task = relationship("JiraTask", back_populates="merge_requests")
     commits = relationship("Commit", back_populates="merge_request", cascade="all, delete-orphan")
     review_comments = relationship("ReviewComment", back_populates="merge_request", cascade="all, delete-orphan")
 
-    def extract_jira_key(self) -> Optional[str]:
+    def extract_jira_key(self) -> str | None:
         pattern = r'([A-Z]+-\d+)'
         match = re.search(pattern, self.title)
         return match.group(1) if match else None
