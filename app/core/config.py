@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     github_api_url: str = "https://api.github.com"
     github_token: str = ""
     github_webhook_secret: str = ""
+    jira_webhook_secret: str = ""
     jira_base_url: str = ""
     jira_email: str = ""
     jira_api_token: str = ""

@@ -17,6 +17,23 @@ class WebhookResponse(BaseModel):
     message: str = ""
 
 
+async def verify_jira_secret(
+    x_jira_secret: str | None = Header(None),
+) -> None:
+    configured = settings.jira_webhook_secret
+    if not configured:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="JIRA_WEBHOOK_SECRET is not configured. "
+                   "Set it in .env before using Jira webhooks.",
+        )
+    if x_jira_secret != configured:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Jira webhook secret",
+        )
+
+
 async def verify_github_signature(
     request: Request,
     x_hub_signature_256: str = Header(None),
@@ -120,6 +137,7 @@ async def github_review_comment_webhook(
 async def jira_issue_webhook(
     request: Request,
     db: Session = Depends(get_db),
+    _: None = Depends(verify_jira_secret),
 ) -> WebhookResponse:
     payload = await request.json()
     service = WebhookService(db)

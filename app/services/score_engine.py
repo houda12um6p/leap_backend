@@ -89,8 +89,9 @@ def calculate_developer_score(user_id: str, db: Session, project_id: str | None 
     user.total_score = total
     db.commit()
 
-    if total < 700 and project_id:
-        _ensure_low_score_alert(db, user, total, project_id)
+    avg_score = round(total / len(mrs), 2)
+    if avg_score < 700 and project_id:
+        _ensure_low_score_alert(db, user, avg_score, project_id)
 
     return total
 
@@ -113,7 +114,7 @@ def _ensure_low_score_alert(db: Session, user: User, score: float, project_id: s
     db.add(Alert(
         type="low_developer_score",
         severity=AlertSeverity.HIGH,
-        message=f"{user.name} ({user.email}) score dropped to {score:.0f}/1000",
+        message=f"{user.name} ({user.email}) average PR score is {score:.0f} — quality review needed",
         project_id=project_id,
         is_resolved=False,
     ))
