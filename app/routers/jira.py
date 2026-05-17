@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.dependencies import get_current_user
 from ..models.jira_task import JiraTask
+from ..models.project import Project
 from ..models.user import User
-from ..services.jira_service import JiraService
+from ..services.jira_service import JiraService, resolve_credentials
 
 router = APIRouter(prefix="/jira", tags=["jira"])
 
@@ -69,15 +70,19 @@ def sync_jira_tasks(
         ) from e
 
 
-@router.get("/sprints")
+@router.get("/sprints/{project_id}")
 def get_sprints(
-    project_key: str | None = None,
+    project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     try:
+        credentials = resolve_credentials(project)
         service = JiraService(db)
-        sprints = service.fetch_sprints(project_key=project_key)
+        sprints = service.fetch_sprints(credentials, project_key=project.jira_key)
         return {"status": "success", "sprints": sprints}
     except RuntimeError as e:
         raise HTTPException(

@@ -10,6 +10,7 @@ from ..core.config import settings
 from ..core.security import get_password_hash
 from ..models.commit import Commit
 from ..models.merge_request import MergeRequest, MergeRequestStatus
+from ..models.project import Project
 from ..models.review_comment import ReviewComment
 from ..models.user import User, UserRole
 from .llm_service import classify_many
@@ -99,6 +100,20 @@ class GitHubService:
             next_params = None
         return items
 
+    async def _get_all_safe(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        params: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Like _get_all, but swallows 4xx/5xx and rate-limit failures and
+        returns []. Use when iterating per-PR so a single bad/inaccessible PR
+        does not abort the entire sync."""
+        try:
+            return await self._get_all(client, url, params)
+        except (httpx.HTTPStatusError, httpx.RequestError):
+            return []
+
     async def fetch_branches(self, repo_owner: str, repo_name: str) -> list[dict[str, Any]]:
         async with httpx.AsyncClient(timeout=30) as client:
             raw = await self._get_all(
@@ -141,7 +156,7 @@ class GitHubService:
         )
         pr_detail = detail_resp.json() if detail_resp.status_code == 200 else pr_summary
 
-        commits_raw = await self._get_all(
+        commits_raw = await self._get_all_safe(
             client,
             f"{self.api_url}/repos/{repo_owner}/{repo_name}/pulls/{number}/commits",
         )
@@ -251,16 +266,21 @@ class GitHubService:
                 date=self._parse_iso(cd["date"]) or datetime.now(UTC),
             ))
 
-        keys = re.findall(r"[A-Z]+-\d+", mr.title or "")
+        keys = re.findall(r"[A-Z][A-Z0-9]+-\d+", mr.title or "")
         if keys:
-            from .jira_service import JiraService
-            jira_service = JiraService(self.db)
-            for key in keys:
-                task = jira_service.find_jira_task_by_key(key)
-                if task:
-                    mr.jira_task_id = task.id
-                    mr.story_points = task.story_points or 0
-                    break
+            project = self.db.query(Project).filter(Project.id == project_id).first()
+            project_prefix = (project.jira_key or "").upper() if project else ""
+            if project_prefix:
+                keys = [k for k in keys if k.split("-", 1)[0] == project_prefix]
+            if keys:
+                from .jira_service import JiraService
+                jira_service = JiraService(self.db)
+                for key in keys:
+                    task = jira_service.find_jira_task_by_key(key)
+                    if task:
+                        mr.jira_task_id = task.id
+                        mr.story_points = task.story_points or 0
+                        break
 
         return mr
 
@@ -322,11 +342,19 @@ class GitHubService:
         pending: list[dict[str, Any]] = []
         async with httpx.AsyncClient(timeout=60) as client:
             for mr in mrs:
-                comments_raw = await self._get_all(
+                # GitHub stores PR feedback in two endpoints:
+                #   /pulls/{n}/comments  — inline diff (review) comments
+                #   /issues/{n}/comments — top-level conversation comments
+                # We ingest both since reviewers may leave feedback in either.
+                review_raw = await self._get_all_safe(
                     client,
                     f"{self.api_url}/repos/{repo_owner}/{repo_name}/pulls/{mr.github_id}/comments",
                 )
-                for c in comments_raw:
+                issue_raw = await self._get_all_safe(
+                    client,
+                    f"{self.api_url}/repos/{repo_owner}/{repo_name}/issues/{mr.github_id}/comments",
+                )
+                for c in (*review_raw, *issue_raw):
                     body = (c.get("body") or "").strip()
                     if not body:
                         continue

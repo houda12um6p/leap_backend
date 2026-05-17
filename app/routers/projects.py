@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ..core.crypto import encrypt
 from ..core.database import get_db
 from ..core.dependencies import get_current_user
 from ..models.alert import Alert
@@ -26,7 +27,11 @@ def create_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Project:
-    project = Project(**project_data.model_dump())
+    data = project_data.model_dump()
+    plaintext_token = data.pop("jira_api_token", None)
+    project = Project(**data)
+    if plaintext_token:
+        project.jira_api_token_encrypted = encrypt(plaintext_token)
     db.add(project)
     db.commit()
     db.refresh(project)
@@ -70,6 +75,9 @@ def update_project(
     data = update.model_dump(exclude_unset=True)
     if "status" in data and isinstance(data["status"], str):
         data["status"] = data["status"].lower()
+    if "jira_api_token" in data:
+        plaintext = data.pop("jira_api_token")
+        project.jira_api_token_encrypted = encrypt(plaintext) if plaintext else None
     for key, value in data.items():
         setattr(project, key, value)
     db.commit()
